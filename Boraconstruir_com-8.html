@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2563eb">
+<title>Boraconstruir.com</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:#f4f7fb;color:#172033}
+header{background:#2563eb;color:#fff;padding:24px 18px;padding-top:max(24px,env(safe-area-inset-top));text-align:center}
+header h1{margin:0;font-size:27px}header p{margin:7px 0 0;opacity:.9}
+main{max-width:760px;margin:auto;padding:16px}.card{background:#fff;border-radius:18px;padding:18px;margin-bottom:16px;box-shadow:0 4px 18px #0001}
+h2{font-size:20px;margin:0 0 14px}label{display:block;font-weight:650;margin:12px 0}input,select{width:100%;padding:13px;border:1px solid #d5dce8;border-radius:11px;font-size:16px;background:#fff}
+button{border:0;border-radius:11px;padding:12px 16px;background:#2563eb;color:#fff;font-weight:700;font-size:15px}.secondary{background:#e8eefb;color:#1743a5}.danger{background:#fee2e2;color:#b42318}
+.actions{display:flex;gap:8px;margin-top:14px}.toolbar{display:grid;grid-template-columns:1fr 170px;gap:9px}.item{border:1px solid #e1e6ef;border-radius:13px;padding:14px;margin-top:10px;display:flex;justify-content:space-between;gap:12px}.item h3{margin:0 0 4px}.meta{font-size:13px;color:#667085}.price{font-size:20px;font-weight:800;white-space:nowrap}.item-actions{display:flex;gap:7px;margin-top:9px}.item-actions button{padding:8px 10px;font-size:13px}.empty{text-align:center;color:#667085;padding:25px}.hidden{display:none}footer{text-align:center;color:#667085;font-size:12px;padding:18px}
+@media(max-width:600px){.toolbar{grid-template-columns:1fr}.item{display:block}.price{margin-top:10px}.actions button{flex:1}}
+</style>
+</head>
+<body>
+<header><h1>Boraconstruir.com</h1><p>Produtos e preços, mesmo sem internet</p></header>
+<main>
+<section class="card">
+<h2 id="titulo">Cadastrar produto</h2>
+<form id="form">
+<input type="hidden" id="id">
+<label>Código de barras<input id="codigo" inputmode="numeric" placeholder="Digite ou escaneie o código"></label>
+<div class="actions"><button type="button" id="lerCodigo" class="secondary">📷 Ler código de barras</button></div>
+<label>Nome do produto<input id="nome" required placeholder="Ex.: Cimento 50 kg"></label>
+<label>Preço (R$)<input id="preco" required type="number" min="0" step="0.01" inputmode="decimal" placeholder="0,00"></label>
+<label>Categoria<input id="categoria" placeholder="Ex.: Materiais de construção"></label>
+<p class="meta">O leitor usa a câmera do celular quando o navegador oferece suporte. Se não houver suporte, digite o código manualmente.</p>
+<div class="actions"><button>Salvar produto</button><button type="button" id="cancelar" class="secondary hidden">Cancelar</button></div>
+</form>
+</section>
+<section class="card">
+<h2>Produtos cadastrados</h2>
+<div class="toolbar"><input id="busca" placeholder="Pesquisar..."><select id="ordem"><option value="nome">Nome</option><option value="menor">Menor preço</option><option value="maior">Maior preço</option></select></div>
+<p id="resumo" class="meta"></p><div id="lista"></div><div id="vazio" class="empty">Nenhum produto cadastrado.</div>
+</section>
+</main>
+<footer>Os dados ficam salvos neste navegador.</footer>
+<script>
+const CHAVE="boraconstruir-produtos";
+let produtos=JSON.parse(localStorage.getItem(CHAVE)||"[]");
+const $=x=>document.getElementById(x);
+const moeda=v=>Number(v).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+const esc=s=>String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+function salvar(){localStorage.setItem(CHAVE,JSON.stringify(produtos))}
+function render(){
+ let q=$("busca").value.toLowerCase().trim(), o=$("ordem").value;
+ let a=produtos.filter(p=>(p.nome+" "+p.categoria).toLowerCase().includes(q));
+ if(o==="nome")a.sort((x,y)=>x.nome.localeCompare(y.nome,"pt-BR"));
+ if(o==="menor")a.sort((x,y)=>x.preco-y.preco);
+ if(o==="maior")a.sort((x,y)=>y.preco-x.preco);
+ $("resumo").textContent=a.length+" produto(s) exibido(s) • "+produtos.length+" cadastrado(s)";
+ $("vazio").classList.toggle("hidden",a.length>0);
+ $("lista").innerHTML=a.map(p=>`<div class="item"><div><h3>${esc(p.nome)}</h3><div class="meta">${p.codigo?`Código: ${esc(p.codigo)} • `:""}${p.categoria?esc(p.categoria)+" • ":""}Cadastrado em ${new Date(p.data).toLocaleDateString("pt-BR")}</div><div class="item-actions"><button class="secondary" onclick="editar('${p.id}')">Editar</button><button class="danger" onclick="excluir('${p.id}')">Excluir</button></div></div><div class="price">${moeda(p.preco)}</div></div>`).join("");
+}
+$("form").onsubmit=e=>{e.preventDefault();let id=$("id").value,n=$("nome").value.trim(),p=Number($("preco").value),c=$("categoria").value.trim(),codigo=$("codigo").value.trim();if(!n||!Number.isFinite(p)||p<0)return;if(id){let x=produtos.find(v=>v.id===id);Object.assign(x,{nome:n,preco:p,categoria:c,codigo})}else produtos.push({id:Date.now().toString(),nome:n,preco:p,categoria:c,codigo,data:Date.now()});salvar();resetar();render()};
+function editar(id){let p=produtos.find(x=>x.id===id);$("id").value=p.id;$("codigo").value=p.codigo||"";$("nome").value=p.nome;$("preco").value=p.preco;$("categoria").value=p.categoria||"";$("titulo").textContent="Editar produto";$("cancelar").classList.remove("hidden");scrollTo({top:0,behavior:"smooth"})}
+function excluir(id){let p=produtos.find(x=>x.id===id);if(confirm('Excluir "'+p.nome+'"?')){produtos=produtos.filter(x=>x.id!==id);salvar();render()}}
+function resetar(){$("form").reset();$("codigo").value="";$("id").value="";$("titulo").textContent="Cadastrar produto";$("cancelar").classList.add("hidden")}
+$("lerCodigo").onclick=async()=>{
+  if(!("BarcodeDetector" in window)){ alert("Seu navegador não oferece leitor de código de barras pela câmera. Digite o código manualmente."); return; }
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
+    const video=document.createElement("video"); video.srcObject=stream; await video.play();
+    const detector=new BarcodeDetector({formats:["ean_13","ean_8","upc_a","upc_e","code_128","code_39","itf"]});
+    let ativo=true;
+    alert("Aponte a câmera para o código de barras. Toque em OK e mantenha o código enquadrado.");
+    const scan=async()=>{if(!ativo)return;try{const codes=await detector.detect(video);if(codes.length){$("codigo").value=codes[0].rawValue;ativo=false;stream.getTracks().forEach(t=>t.stop());return}}catch(e){}requestAnimationFrame(scan)};scan();
+  }catch(e){alert("Não foi possível acessar a câmera. Verifique a permissão do navegador.");}
+};
+$("cancelar").onclick=resetar;$("busca").oninput=render;$("ordem").onchange=render;render();
+</script>
+</body>
+</html>
