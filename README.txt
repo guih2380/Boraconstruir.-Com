@@ -1,0 +1,1 @@
+Envie index.html e manifest.json para a raiz do seu repositório GitHub Pages. Depois abra https://guih2380.github.io no Chrome e escolha Instalar aplicativo.
